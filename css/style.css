@@ -171,10 +171,12 @@ button:disabled { cursor: default; }
   font-size: clamp(24px, 6.5vw, 34px);
 }
 
+/* 문제 이미지 상자: 안의 이미지는 항상 상자 크기에 맞춰 줄어듭니다 */
 .stage {
   position: relative;
-  display: grid; place-items: center;
+  display: flex; align-items: center; justify-content: center;
   height: clamp(200px, 42vh, 300px);
+  padding: 10px;
   margin-bottom: 16px;
   border-radius: 20px;
   background: radial-gradient(circle, #ffffff30 0, #ffffff08 65%);
@@ -194,24 +196,27 @@ button:disabled { cursor: default; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .brawler-img {
-  max-width: 90%;
-  max-height: 92%;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
   object-fit: contain;
   filter: drop-shadow(0 8px 0 #0005);
   transition: filter .5s, transform .6s ease;
 }
 .brawler-img.silhouette, .mode-thumb img.silhouette { filter: brightness(0) drop-shadow(0 0 6px #fff8); }
 
-.zoom-box { width: 100%; height: 100%; display: grid; place-items: center; overflow: hidden; }
-.zoom-box .brawler-img { width: auto; height: 92%; max-width: 100%; max-height: none; }
+.zoom-box { width: 100%; height: 100%; overflow: hidden; border-radius: 12px; }
 .brawler-img.zoomed { transform: scale(2.8); }
 
 .item-card {
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  width: 100%; height: 100%;
 }
 .item-card img {
-  width: clamp(110px, 30vw, 150px);
-  height: clamp(110px, 30vw, 150px);
+  width: 100%;
+  max-width: 150px;
+  flex: 0 1 150px;
+  min-height: 0;
   object-fit: contain;
   filter: drop-shadow(0 6px 0 #0005);
 }
@@ -225,8 +230,8 @@ button:disabled { cursor: default; }
 .item-card.gadget span { color: #6cff7a; }
 .item-card.star span { color: var(--yellow); }
 
-.map-box { width: 100%; height: 100%; display: grid; place-items: center; padding: 10px; }
-.map-box img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
+.map-box { width: 100%; height: 100%; }
+.map-box > img { display: block; width: 100%; height: 100%; object-fit: contain; }
 
 .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
@@ -410,14 +415,14 @@ button:disabled { cursor: default; }
 
 /* 핀 퀴즈 */
 .pin-img {
-  max-width: 70%; max-height: 85%;
+  width: 100%; height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 6px 0 #0005);
 }
 
 /* 능력치 비교 */
 .versus { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
-.versus .brawler-img { width: 42%; max-width: 42%; height: 92%; }
+.versus .brawler-img { flex: 1 1 0; width: auto; height: 100%; }
 .versus .vs {
   font-family: var(--title-font);
   font-size: 30px;
