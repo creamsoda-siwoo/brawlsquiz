@@ -33,7 +33,8 @@ python3 -m http.server 8000
 # http://localhost:8000 접속
 ```
 
-GitHub Pages 등 정적 호스팅에 그대로 올려도 동작합니다.
+GitHub Pages: https://creamsoda-siwoo.github.io/brawlsquiz/
+(`.github/workflows/pages.yml` 이 푸시할 때마다 자동으로 배포합니다)
 
 ## 데이터 갱신
 
