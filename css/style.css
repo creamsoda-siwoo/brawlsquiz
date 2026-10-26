@@ -206,7 +206,7 @@ button:disabled { cursor: default; }
 .brawler-img.silhouette, .mode-thumb img.silhouette { filter: brightness(0) drop-shadow(0 0 6px #fff8); }
 
 .zoom-box { width: 100%; height: 100%; overflow: hidden; border-radius: 12px; }
-.brawler-img.zoomed { transform: scale(2.8); }
+.brawler-img.zoomed { transform: scale(var(--zoom, 2.8)); }
 
 .item-card {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
@@ -430,3 +430,39 @@ button:disabled { cursor: default; }
   -webkit-text-stroke: 1.5px var(--ink);
   paint-order: stroke fill;
 }
+
+/* 난이도 선택 */
+.difficulty {
+  display: flex;
+  width: fit-content;
+  margin: 0 auto;
+  padding: 4px;
+  gap: 4px;
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  background: #0005;
+}
+.difficulty button {
+  min-width: 96px;
+  padding: 8px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-weight: 900;
+  font-size: 17px;
+  color: #dfe6ff;
+}
+.difficulty button.active { background: var(--bad); color: #fff; box-shadow: 0 3px 0 var(--ink); }
+.difficulty button.active[data-difficulty="normal"] { background: var(--good); }
+.difficulty-desc { margin: 8px 0 12px; text-align: center; font-size: 13px; font-weight: 700; color: var(--muted); }
+
+/* 어려움: 흐린 이미지 · 숨긴 아이템 이름 */
+.blurred { filter: blur(14px) saturate(.6); transition: filter .5s; }
+.item-card .hidden-name { color: #fff; letter-spacing: 4px; }
+
+/* 보기 6개 */
+.choices.many .choice { min-height: 54px; font-size: 16px; }
+.choices.grid.many { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.choices.grid.many .choice { padding: 8px 4px; font-size: 14px; }
+.choices.grid.many .choice img { width: 52px; height: 52px; }
+.choices.grid.many .choice .key { left: 6px; top: 6px; transform: none; }

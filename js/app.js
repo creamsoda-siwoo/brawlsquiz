@@ -3,7 +3,20 @@
 
   const DATA = window.BRAWL_DATA;
   const QUESTIONS_PER_GAME = 10;
-  const TIME_LIMIT = 15; // 초
+
+  // 난이도별 규칙
+  const DIFFICULTIES = {
+    normal: {
+      label: "보통", desc: "보기 4개 · 15초",
+      time: 15, choices: 4, zoom: 2.8, itemNames: true, blur: false, closeStats: false,
+      scoreRate: 1, penalty: 0,
+    },
+    hard: {
+      label: "어려움", desc: "보기 6개 · 10초 · 비슷한 브롤러끼리 · 오답 -50점",
+      time: 10, choices: 6, zoom: 4.5, itemNames: false, blur: true, closeStats: true,
+      scoreRate: 1.5, penalty: 50,
+    },
+  };
 
   const $ = (id) => document.getElementById(id);
 
@@ -26,6 +39,10 @@
   const className = (c) => DATA.classes[c];
   const modeName = (m) => DATA.modes[m].name;
 
+  let difficulty = "hard";
+  const D = () => DIFFICULTIES[difficulty];
+  const optionCount = () => D().choices - 1; // 정답을 뺀 오답 개수
+
   const store = {
     get(key) {
       try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
@@ -47,12 +64,22 @@
   const classes = Object.keys(DATA.classes);
   const mapModes = Object.keys(DATA.modes);
 
-  // 이름 보기: 절반은 같은 역할군에서 골라 난이도를 올립니다.
-  function brawlerDistractors(answer, n = 3) {
-    const sameClass = sample(brawlers, 2, (b) => b.id === answer.id || b.class !== answer.class);
-    const rest = sample(brawlers, n - sameClass.length, (b) => b.id === answer.id || sameClass.includes(b));
-    return [...sameClass, ...rest];
+  // 오답 브롤러 고르기
+  // 보통: 절반은 같은 역할군, 어려움: 역할군·희귀도가 같은 비슷한 브롤러부터
+  function brawlerDistractors(answer, n = optionCount()) {
+    const others = brawlers.filter((b) => b.id !== answer.id);
+    if (difficulty !== "hard") {
+      const sameClass = sample(others, 2, (b) => b.class !== answer.class);
+      return [...sameClass, ...sample(others, n - sameClass.length, (b) => sameClass.includes(b))];
+    }
+    const similarity = (b) => (b.class === answer.class ? 2 : 0) + (b.rarity === answer.rarity ? 1 : 0);
+    return shuffle(others)
+      .sort((a, b) => similarity(b) - similarity(a))
+      .slice(0, n);
   }
+
+  // 정답 하나 + 오답 여러 개를 섞은 보기 목록
+  const withOptions = (answer, pool) => shuffle([answer, ...sample(pool, optionCount(), (x) => x === answer)]);
 
   const nameChoices = (answer) =>
     shuffle([answer, ...brawlerDistractors(answer)]).map((b) => ({
@@ -74,11 +101,12 @@
       const b = pick(brawlers);
       return {
         question: "이 브롤러의 이름은?",
-        stage: brawlerImg(figure(b)),
+        stage: brawlerImg(figure(b), D().blur ? "blurred" : ""),
         images: [figure(b)],
         choices: nameChoices(b),
         answerText: b.name,
         reviewImg: b.icon,
+        reveal: (stage) => stage.querySelector("img").classList.remove("blurred"),
       };
     },
 
@@ -106,7 +134,11 @@
         choices: nameChoices(b),
         answerText: b.name,
         reviewImg: b.icon,
-        setup: (stage) => { stage.querySelector("img").style.transformOrigin = `${x}% ${y}%`; },
+        setup: (stage) => {
+          const img = stage.querySelector("img");
+          img.style.transformOrigin = `${x}% ${y}%`;
+          img.style.setProperty("--zoom", D().zoom);
+        },
         reveal: (stage) => stage.querySelector("img").classList.remove("zoomed"),
       };
     },
@@ -116,7 +148,7 @@
       const g = pick(b.gadgets);
       return {
         question: "이 가젯을 가진 브롤러는?",
-        stage: `<div class="item-card gadget"><img src="${esc(g.img)}" alt=""><span>${esc(g.name)}</span></div>`,
+        stage: itemCard("gadget", g),
         images: [g.img],
         choices: portraitChoices(b),
         answerText: `${b.name} · ${g.name}`,
@@ -130,7 +162,7 @@
       const s = pick(b.starPowers);
       return {
         question: "이 스타 파워를 가진 브롤러는?",
-        stage: `<div class="item-card star"><img src="${esc(s.img)}" alt=""><span>${esc(s.name)}</span></div>`,
+        stage: itemCard("star", s),
         images: [s.img],
         choices: portraitChoices(b),
         answerText: `${b.name} · ${s.name}`,
@@ -141,7 +173,7 @@
 
     rarity() {
       const b = pick(brawlers);
-      const options = shuffle([b.rarity, ...sample(rarities, 3, (r) => r === b.rarity)]);
+      const options = withOptions(b.rarity, rarities);
       return {
         question: `${b.name}의 희귀도는?`,
         stage: brawlerImg(figure(b)),
@@ -154,7 +186,7 @@
 
     role() {
       const b = pick(brawlers);
-      const options = shuffle([b.class, ...sample(classes, 3, (c) => c === b.class)]);
+      const options = withOptions(b.class, classes);
       return {
         question: `${b.name}의 역할군은?`,
         stage: brawlerImg(figure(b)),
@@ -167,7 +199,7 @@
 
     map() {
       const m = pick(DATA.maps);
-      const options = shuffle([m.mode, ...sample(mapModes, 3, (k) => k === m.mode)]);
+      const options = withOptions(m.mode, mapModes);
       return {
         question: "이 맵의 게임 모드는?",
         stage: `<div class="map-box"><img src="${esc(m.img)}" alt=""></div>`,
@@ -182,7 +214,7 @@
       const m = pick(DATA.maps);
       // 같은 모드의 다른 맵 이름을 오답으로 사용
       const names = [...new Set(DATA.maps.filter((x) => x.mode === m.mode).map((x) => x.name))].filter((n) => n !== m.name);
-      const options = shuffle([m.name, ...sample(names, 3)]);
+      const options = withOptions(m.name, names);
       return {
         question: "이 맵의 이름은?",
         stage: `<div class="map-box"><img src="${esc(m.img)}" alt=""><span class="map-mode"><img src="${esc(DATA.modes[m.mode].img)}" alt="">${esc(modeName(m.mode))}</span></div>`,
@@ -210,11 +242,12 @@
       const b = pick(withPin);
       return {
         question: "이 핀의 주인은?",
-        stage: `<img class="pin-img" src="${esc(b.pin)}" alt="">`,
+        stage: `<img class="pin-img${D().blur ? " blurred" : ""}" src="${esc(b.pin)}" alt="">`,
         images: [b.pin],
         choices: nameChoices(b),
         answerText: b.name,
         reviewImg: b.pin,
+        reveal: (stage) => stage.querySelector("img").classList.remove("blurred"),
       };
     },
 
@@ -262,7 +295,7 @@
 
     gear() {
       const g = pick(DATA.gears);
-      const options = shuffle([g, ...sample(DATA.gears, 3, (x) => x === g)]);
+      const options = withOptions(g, DATA.gears);
       return {
         question: "이 기어의 이름은?",
         stage: `<div class="item-card"><img src="${esc(g.img)}" alt=""></div>`,
@@ -282,14 +315,24 @@
     },
   };
 
+  // 가젯·스타 파워 카드: 어려움에서는 이름을 숨겼다가 정답 공개 때 보여줌
+  function itemCard(kind, item) {
+    const name = D().itemNames ? `<span>${esc(item.name)}</span>` : `<span class="hidden-name">???</span>`;
+    return `<div class="item-card ${kind}"><img src="${esc(item.img)}" alt="">${name}</div>`;
+  }
+
   function textCard(kind, badge, text) {
     return `<div class="text-card ${kind}"><span class="badge">${esc(badge)}</span><strong>${esc(text)}</strong></div>`;
   }
 
   // 두 브롤러의 능력치(값이 다른 쌍)를 비교하는 문제
+  // 어려움: 값 차이가 가장 작은 쌍 중에서 골라 헷갈리게 함
   function compareQuestion(stat, question, label) {
-    const a = pick(brawlers);
-    const b = pick(brawlers.filter((x) => x[stat] && x[stat] !== a[stat]));
+    const a = pick(brawlers.filter((x) => x[stat]));
+    const rivals = brawlers.filter((x) => x[stat] && x[stat] !== a[stat]);
+    const b = D().closeStats
+      ? pick(rivals.sort((x, y) => Math.abs(x[stat] - a[stat]) - Math.abs(y[stat] - a[stat])).slice(0, 3))
+      : pick(rivals);
     const win = a[stat] > b[stat] ? a : b;
     const pair = shuffle([a, b]);
     return {
@@ -350,9 +393,22 @@
   }
 
   // ---------- 홈 ----------
+  // 최고 점수는 난이도별로 따로 저장 (보통은 예전 기록과 같은 키)
+  const bestKey = (mode) => (difficulty === "normal" ? mode : `${mode}:${difficulty}`);
+
+  function renderDifficulty() {
+    $("difficulty").innerHTML = Object.entries(DIFFICULTIES).map(([id, d]) => `
+      <button role="radio" aria-checked="${id === difficulty}" class="${id === difficulty ? "active" : ""}" data-difficulty="${id}">${d.label}</button>`).join("");
+    $("difficulty-desc").textContent = D().desc;
+  }
+
   function renderHome() {
-    const bests = store.get("brawlquiz-best") || {};
-    $("best-score").textContent = Math.max(0, ...Object.values(bests));
+    const saved = store.get("brawlquiz-difficulty");
+    if (DIFFICULTIES[saved]) difficulty = saved;
+    renderDifficulty();
+    const allBests = store.get("brawlquiz-best") || {};
+    const bests = Object.fromEntries(MODES.map((m) => [m.id, allBests[bestKey(m.id)]]));
+    $("best-score").textContent = Math.max(0, ...Object.values(bests).filter(Boolean));
     $("logo-brawler").src = figure(pick(brawlers));
     $("mode-list").innerHTML = MODES.map((m) => `
       ${m.group ? `<h3 class="mode-group">${m.group}</h3>` : ""}
@@ -369,7 +425,7 @@
 
   // ---------- 게임 ----------
   function startGame(modeId) {
-    game = { mode: modeId, index: 0, score: 0, correct: 0, streak: 0, history: [], current: null, next: makeQuestion(modeId) };
+    game = { mode: modeId, difficulty, index: 0, score: 0, correct: 0, streak: 0, history: [], current: null, next: makeQuestion(modeId) };
     $("q-total").textContent = QUESTIONS_PER_GAME;
     $("score").textContent = "0";
     showScreen("quiz");
@@ -395,7 +451,7 @@
     q.setup?.(stage);
 
     const choices = $("choices");
-    choices.className = "choices" + (q.grid ? " grid" : "");
+    choices.className = "choices" + (q.grid ? " grid" : "") + (q.choices.length > 4 ? " many" : "");
     choices.innerHTML = q.choices.map((c, i) => `
       <button class="choice" data-i="${i}" ${c.color ? `style="--accent:${esc(c.color)}"` : ""} disabled>
         <span class="key">${i + 1}</span>
@@ -418,13 +474,14 @@
     bar.style.width = "100%";
     bar.className = "";
     timerId = setInterval(() => {
-      const left = Math.max(0, TIME_LIMIT - (performance.now() - start) / 1000);
+      const limit = D().time;
+      const left = Math.max(0, limit - (performance.now() - start) / 1000);
       game.timeLeft = left;
-      bar.style.width = `${(left / TIME_LIMIT) * 100}%`;
-      bar.className = left < 5 ? "danger" : left < 9 ? "warn" : "";
+      bar.style.width = `${(left / limit) * 100}%`;
+      bar.className = left < limit / 3 ? "danger" : left < limit * 0.6 ? "warn" : "";
       if (left <= 0) answer(-1);
     }, 50);
-    game.timeLeft = TIME_LIMIT;
+    game.timeLeft = D().time;
   }
 
   function answer(i) {
@@ -440,19 +497,28 @@
       else if (j === i) b.classList.add("wrong");
     });
     q.reveal?.($("stage"));
+    $("stage").querySelectorAll(".hidden-name").forEach((el) => {
+      el.textContent = q.answerText.split(" · ")[1] || "";
+      el.classList.remove("hidden-name");
+    });
 
     const fb = $("feedback");
     if (correct) {
       game.streak++;
       game.correct++;
-      const gained = 100 + Math.round(game.timeLeft * 10) + Math.min(game.streak - 1, 5) * 20;
+      const base = 100 + Math.round((game.timeLeft / D().time) * 150) + Math.min(game.streak - 1, 5) * 20;
+      const gained = Math.round(base * D().scoreRate);
       game.score += gained;
       fb.textContent = `정답! +${gained}`;
       fb.className = "feedback good";
       bumpScore();
     } else {
       game.streak = 0;
-      fb.textContent = i < 0 ? `시간 초과! 정답: ${q.answerText}` : `아쉬워요! 정답: ${q.answerText}`;
+      const lost = Math.min(game.score, D().penalty);
+      game.score -= lost;
+      if (lost) bumpScore();
+      const penaltyText = lost ? ` (-${lost})` : "";
+      fb.textContent = (i < 0 ? `시간 초과!${penaltyText} 정답: ` : `아쉬워요!${penaltyText} 정답: `) + q.answerText;
       fb.className = "feedback bad";
     }
     $("streak").textContent = game.streak >= 2 ? `🔥 ${game.streak}연속 정답!` : "";
@@ -486,12 +552,12 @@
     $("result-title").textContent = title;
     $("result-brawler").src = figure(pick(brawlers));
     $("final-score").textContent = score;
-    $("result-sub").textContent = `${QUESTIONS_PER_GAME}문제 중 ${correct}문제 정답 · ${MODES.find((m) => m.id === mode).title}`;
+    $("result-sub").textContent = `${QUESTIONS_PER_GAME}문제 중 ${correct}문제 정답 · ${MODES.find((m) => m.id === mode).title} · ${D().label}`;
 
     const bests = store.get("brawlquiz-best") || {};
-    const isBest = score > (bests[mode] || 0);
+    const isBest = score > (bests[bestKey(mode)] || 0);
     if (isBest) {
-      bests[mode] = score;
+      bests[bestKey(mode)] = score;
       store.set("brawlquiz-best", bests);
     }
     $("new-best").classList.toggle("hidden", !isBest || score === 0);
@@ -512,6 +578,12 @@
   }
 
   // ---------- 이벤트 ----------
+  $("difficulty").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-difficulty]");
+    if (!btn) return;
+    store.set("brawlquiz-difficulty", btn.dataset.difficulty);
+    renderHome();
+  });
   $("mode-list").addEventListener("click", (e) => {
     const card = e.target.closest("[data-mode]");
     if (card) startGame(card.dataset.mode);
@@ -526,7 +598,7 @@
   $("home-btn").addEventListener("click", quit);
   document.addEventListener("keydown", (e) => {
     if (!$("quiz").classList.contains("active") || !game) return;
-    if (/^[1-4]$/.test(e.key) && !game.answered) {
+    if (/^[1-6]$/.test(e.key) && !game.answered) {
       const btn = $("choices").querySelector(`button[data-i="${Number(e.key) - 1}"]`);
       if (btn && !btn.disabled) answer(Number(e.key) - 1);
     } else if ((e.key === "Enter" || e.key === " ") && game.answered && document.activeElement !== $("next")) {
