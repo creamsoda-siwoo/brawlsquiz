@@ -33,8 +33,8 @@ python3 -m http.server 8000
 # http://localhost:8000 접속
 ```
 
-GitHub Pages: https://creamsoda-siwoo.github.io/brawlsquiz/
-(`.github/workflows/pages.yml` 이 푸시할 때마다 자동으로 배포합니다)
+배포 주소: https://brawlsquiz.vercel.app
+(Vercel 프로젝트가 저장소에 연결되어 있어 푸시할 때마다 자동으로 배포됩니다)
 
 ## 데이터 갱신
 
