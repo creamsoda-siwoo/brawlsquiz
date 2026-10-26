@@ -2,7 +2,6 @@
   "use strict";
 
   const DATA = window.BRAWL_DATA;
-  const KO = window.KO;
   const QUESTIONS_PER_GAME = 10;
   const TIME_LIMIT = 15; // 초
 
@@ -22,11 +21,10 @@
   const sample = (arr, n, exclude = () => false) => shuffle(arr.filter((x) => !exclude(x))).slice(0, n);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-  const koName = (b) => KO.brawlers[b.name] || b.name;
-  const subName = (b) => (KO.brawlers[b.name] && KO.brawlers[b.name] !== b.name ? b.name : "");
-  const koRarity = (r) => KO.rarity[r] || r;
-  const koClass = (c) => KO.class[c] || c;
-  const koMode = (m) => KO.modes[m] || m;
+  // 이름·희귀도·역할군·모드는 모두 게임 공식 한국어 표기 (js/data.js)
+  const rarityName = (r) => DATA.rarities[r].name;
+  const className = (c) => DATA.classes[c];
+  const modeName = (m) => DATA.modes[m].name;
 
   const store = {
     get(key) {
@@ -40,9 +38,9 @@
   const brawlers = DATA.brawlers;
   const withGadgets = brawlers.filter((b) => b.gadgets.length);
   const withStarPowers = brawlers.filter((b) => b.starPowers.length);
-  const rarityOrder = ["Common", "Rare", "Super Rare", "Epic", "Mythic", "Legendary", "Ultra Legendary"];
-  const rarityColors = Object.fromEntries(brawlers.map((b) => [b.rarity, b.rarityColor]));
-  const classes = [...new Set(brawlers.map((b) => b.class))];
+  const withDesc = brawlers.filter((b) => b.desc);
+  const rarities = Object.keys(DATA.rarities);
+  const classes = Object.keys(DATA.classes);
   const mapModes = Object.keys(DATA.modes);
 
   // 이름 보기: 절반은 같은 역할군에서 골라 난이도를 올립니다.
@@ -54,12 +52,12 @@
 
   const nameChoices = (answer) =>
     shuffle([answer, ...brawlerDistractors(answer)]).map((b) => ({
-      label: koName(b), sub: subName(b), correct: b.id === answer.id,
+      label: b.name, correct: b.id === answer.id,
     }));
 
   const portraitChoices = (answer) =>
     shuffle([answer, ...brawlerDistractors(answer)]).map((b) => ({
-      label: koName(b), img: b.icon, correct: b.id === answer.id,
+      label: b.name, img: b.icon, correct: b.id === answer.id,
     }));
 
   // 배경이 투명한 3D 모델 > 일러스트 > 정사각형 초상화 순으로 사용
@@ -75,7 +73,7 @@
         stage: brawlerImg(figure(b)),
         images: [figure(b)],
         choices: nameChoices(b),
-        answerText: koName(b),
+        answerText: b.name,
         reviewImg: b.icon,
       };
     },
@@ -87,7 +85,7 @@
         stage: brawlerImg(figure(b), "silhouette"),
         images: [figure(b)],
         choices: nameChoices(b),
-        answerText: koName(b),
+        answerText: b.name,
         reviewImg: b.icon,
         reveal: (stage) => stage.querySelector("img").classList.remove("silhouette"),
       };
@@ -102,7 +100,7 @@
         stage: `<div class="zoom-box">${brawlerImg(b.img, "zoomed")}</div>`,
         images: [b.img],
         choices: nameChoices(b),
-        answerText: koName(b),
+        answerText: b.name,
         reviewImg: b.icon,
         setup: (stage) => { stage.querySelector("img").style.transformOrigin = `${x}% ${y}%`; },
         reveal: (stage) => stage.querySelector("img").classList.remove("zoomed"),
@@ -117,7 +115,7 @@
         stage: `<div class="item-card gadget"><img src="${esc(g.img)}" alt=""><span>${esc(g.name)}</span></div>`,
         images: [g.img],
         choices: portraitChoices(b),
-        answerText: `${koName(b)} · ${g.name}`,
+        answerText: `${b.name} · ${g.name}`,
         reviewImg: g.img,
         grid: true,
       };
@@ -131,7 +129,7 @@
         stage: `<div class="item-card star"><img src="${esc(s.img)}" alt=""><span>${esc(s.name)}</span></div>`,
         images: [s.img],
         choices: portraitChoices(b),
-        answerText: `${koName(b)} · ${s.name}`,
+        answerText: `${b.name} · ${s.name}`,
         reviewImg: s.img,
         grid: true,
       };
@@ -139,13 +137,13 @@
 
     rarity() {
       const b = pick(brawlers);
-      const options = shuffle([b.rarity, ...sample(rarityOrder, 3, (r) => r === b.rarity)]);
+      const options = shuffle([b.rarity, ...sample(rarities, 3, (r) => r === b.rarity)]);
       return {
-        question: `${koName(b)}의 희귀도는?`,
+        question: `${b.name}의 희귀도는?`,
         stage: brawlerImg(figure(b)),
         images: [figure(b)],
-        choices: options.map((r) => ({ label: koRarity(r), color: rarityColors[r], correct: r === b.rarity })),
-        answerText: `${koName(b)} · ${koRarity(b.rarity)}`,
+        choices: options.map((r) => ({ label: rarityName(r), color: DATA.rarities[r].color, correct: r === b.rarity })),
+        answerText: `${b.name} · ${rarityName(b.rarity)}`,
         reviewImg: b.icon,
       };
     },
@@ -154,11 +152,11 @@
       const b = pick(brawlers);
       const options = shuffle([b.class, ...sample(classes, 3, (c) => c === b.class)]);
       return {
-        question: `${koName(b)}의 역할군은?`,
+        question: `${b.name}의 역할군은?`,
         stage: brawlerImg(figure(b)),
         images: [figure(b)],
-        choices: options.map((c) => ({ label: koClass(c), correct: c === b.class })),
-        answerText: `${koName(b)} · ${koClass(b.class)}`,
+        choices: options.map((c) => ({ label: className(c), correct: c === b.class })),
+        answerText: `${b.name} · ${className(b.class)}`,
         reviewImg: b.icon,
       };
     },
@@ -170,9 +168,37 @@
         question: "이 맵의 게임 모드는?",
         stage: `<div class="map-box"><img src="${esc(m.img)}" alt=""></div>`,
         images: [m.img],
-        choices: options.map((k) => ({ label: koMode(k), img: DATA.modes[k].img, color: DATA.modes[k].color, correct: k === m.mode })),
-        answerText: `${m.name} · ${koMode(m.mode)}`,
+        choices: options.map((k) => ({ label: modeName(k), img: DATA.modes[k].img, color: DATA.modes[k].color, correct: k === m.mode })),
+        answerText: `${m.name} · ${modeName(m.mode)}`,
         reviewImg: DATA.modes[m.mode].img,
+      };
+    },
+
+    mapName() {
+      const m = pick(DATA.maps);
+      // 같은 모드의 다른 맵 이름을 오답으로 사용
+      const names = [...new Set(DATA.maps.filter((x) => x.mode === m.mode).map((x) => x.name))].filter((n) => n !== m.name);
+      const options = shuffle([m.name, ...sample(names, 3)]);
+      return {
+        question: "이 맵의 이름은?",
+        stage: `<div class="map-box"><img src="${esc(m.img)}" alt=""><span class="map-mode"><img src="${esc(DATA.modes[m.mode].img)}" alt="">${esc(modeName(m.mode))}</span></div>`,
+        images: [m.img],
+        choices: options.map((n) => ({ label: n, correct: n === m.name })),
+        answerText: m.name,
+        reviewImg: DATA.modes[m.mode].img,
+      };
+    },
+
+    description() {
+      const b = pick(withDesc);
+      return {
+        question: "이 설명은 어떤 브롤러일까?",
+        stage: `<blockquote class="desc-card">${esc(b.desc)}</blockquote>`,
+        images: [],
+        choices: portraitChoices(b),
+        answerText: b.name,
+        reviewImg: b.icon,
+        grid: true,
       };
     },
   };
@@ -184,8 +210,10 @@
     { id: "gadget", title: "가젯 퀴즈", desc: "가젯의 주인을 찾아요", thumb: () => pick(pick(withGadgets).gadgets).img },
     { id: "starPower", title: "스타 파워 퀴즈", desc: "스타 파워의 주인을 찾아요", thumb: () => pick(pick(withStarPowers).starPowers).img },
     { id: "rarity", title: "희귀도 퀴즈", desc: "브롤러의 희귀도는?", thumb: () => pick(brawlers).icon },
-    { id: "role", title: "역할군 퀴즈", desc: "탱커? 저격수? 암살자?", thumb: () => pick(brawlers).icon },
-    { id: "map", title: "맵 퀴즈", desc: "맵을 보고 모드를 맞혀요", thumb: () => DATA.modes[pick(mapModes)].img },
+    { id: "role", title: "역할군 퀴즈", desc: "탱커? 저격수? 어쌔신?", thumb: () => pick(brawlers).icon },
+    { id: "description", title: "설명 퀴즈", desc: "게임 속 소개글을 보고 맞혀요", thumb: () => pick(brawlers).icon },
+    { id: "map", title: "맵 모드 퀴즈", desc: "맵을 보고 모드를 맞혀요", thumb: () => DATA.modes[pick(mapModes)].img },
+    { id: "mapName", title: "맵 이름 퀴즈", desc: "맵을 보고 이름을 맞혀요", thumb: () => DATA.modes[pick(mapModes)].img },
     { id: "mix", title: "랜덤 믹스", desc: "모든 유형이 섞여 나와요", thumb: () => pick(brawlers).icon, featured: true },
   ];
 
@@ -264,7 +292,7 @@
       <button class="choice" data-i="${i}" ${c.color ? `style="--accent:${esc(c.color)}"` : ""} disabled>
         <span class="key">${i + 1}</span>
         ${c.img ? `<img src="${esc(c.img)}" alt="">` : ""}
-        <span class="label">${esc(c.label)}${c.sub ? `<small>${esc(c.sub)}</small>` : ""}</span>
+        <span class="label">${esc(c.label)}</span>
       </button>`).join("");
 
     // 이미지가 준비된 뒤 타이머 시작 (최대 4초 대기)

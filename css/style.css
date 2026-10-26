@@ -337,3 +337,28 @@ button:disabled { cursor: default; }
   .choices.grid .choice img { width: 60px; height: 60px; }
   .mode-text strong { font-size: 20px; }
 }
+
+/* 설명 퀴즈 */
+.desc-card {
+  margin: 0;
+  padding: 18px 20px;
+  max-height: 100%;
+  overflow-y: auto;
+  font-size: clamp(15px, 4vw, 18px);
+  font-weight: 700;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+.desc-card::before { content: "“"; display: block; font-family: var(--title-font); font-size: 40px; line-height: .6; color: var(--yellow); }
+
+/* 맵 이름 퀴즈의 모드 표시 */
+.map-box { position: relative; }
+.map-mode {
+  position: absolute; left: 10px; top: 10px;
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 12px 4px 6px;
+  border-radius: 999px;
+  background: #000a;
+  font-weight: 900;
+}
+.map-box .map-mode img { width: 24px; height: 24px; border-radius: 0; }
