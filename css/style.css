@@ -362,3 +362,66 @@ button:disabled { cursor: default; }
   font-weight: 900;
 }
 .map-box .map-mode img { width: 24px; height: 24px; border-radius: 0; }
+
+/* 홈 화면 모드 묶음 제목 */
+.mode-group {
+  grid-column: 1 / -1;
+  margin: 10px 0 -2px;
+  font-family: var(--title-font);
+  font-weight: 400;
+  font-size: 20px;
+  color: var(--yellow);
+  -webkit-text-stroke: 1px var(--ink);
+  paint-order: stroke fill;
+}
+
+/* 하이퍼차지·스킬·스킨 이름 카드 */
+.text-card {
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  width: min(88%, 420px);
+  padding: 26px 18px;
+  border: 3px solid var(--ink);
+  border-radius: 20px;
+  box-shadow: 0 6px 0 var(--ink);
+  text-align: center;
+  background: linear-gradient(160deg, #5aa2ff, #2f6ff0);
+}
+.text-card .badge {
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: #0006;
+  font-weight: 900;
+  font-size: 15px;
+}
+.text-card strong {
+  font-family: var(--title-font);
+  font-weight: 400;
+  font-size: clamp(26px, 7.5vw, 38px);
+  line-height: 1.2;
+  word-break: keep-all;
+  -webkit-text-stroke: 1.5px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 3px 0 var(--ink);
+}
+.text-card.hyper { background: linear-gradient(160deg, #c45cff, #6a1fd1); }
+.text-card.super { background: linear-gradient(160deg, #ffd54a, #f08a00); }
+.text-card.attack { background: linear-gradient(160deg, #ff7a7a, #d6243a); }
+.text-card.skin { background: linear-gradient(160deg, #5ef0c8, #109c86); }
+
+/* 핀 퀴즈 */
+.pin-img {
+  max-width: 70%; max-height: 85%;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 0 #0005);
+}
+
+/* 능력치 비교 */
+.versus { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+.versus .brawler-img { width: 42%; max-width: 42%; height: 92%; }
+.versus .vs {
+  font-family: var(--title-font);
+  font-size: 30px;
+  color: var(--yellow);
+  -webkit-text-stroke: 1.5px var(--ink);
+  paint-order: stroke fill;
+}

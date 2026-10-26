@@ -39,6 +39,10 @@
   const withGadgets = brawlers.filter((b) => b.gadgets.length);
   const withStarPowers = brawlers.filter((b) => b.starPowers.length);
   const withDesc = brawlers.filter((b) => b.desc);
+  const withPin = brawlers.filter((b) => b.pin);
+  const withHyper = brawlers.filter((b) => b.hypercharge);
+  const withSkills = brawlers.filter((b) => b.attack && b.super);
+  const withSkins = brawlers.filter((b) => b.skins.length);
   const rarities = Object.keys(DATA.rarities);
   const classes = Object.keys(DATA.classes);
   const mapModes = Object.keys(DATA.modes);
@@ -201,20 +205,123 @@
         grid: true,
       };
     },
+
+    pin() {
+      const b = pick(withPin);
+      return {
+        question: "이 핀의 주인은?",
+        stage: `<img class="pin-img" src="${esc(b.pin)}" alt="">`,
+        images: [b.pin],
+        choices: nameChoices(b),
+        answerText: b.name,
+        reviewImg: b.pin,
+      };
+    },
+
+    hypercharge() {
+      const b = pick(withHyper);
+      return {
+        question: "이 하이퍼차지를 쓰는 브롤러는?",
+        stage: textCard("hyper", "⚡ 하이퍼차지", b.hypercharge),
+        images: [],
+        choices: portraitChoices(b),
+        answerText: `${b.name} · ${b.hypercharge}`,
+        reviewImg: b.icon,
+        grid: true,
+      };
+    },
+
+    skill() {
+      const b = pick(withSkills);
+      const isSuper = Math.random() < 0.5;
+      const name = isSuper ? b.super : b.attack;
+      return {
+        question: isSuper ? "이 궁극기를 쓰는 브롤러는?" : "이 기본 공격을 쓰는 브롤러는?",
+        stage: textCard(isSuper ? "super" : "attack", isSuper ? "💥 궁극기" : "🔫 기본 공격", name),
+        images: [],
+        choices: portraitChoices(b),
+        answerText: `${b.name} · ${name}`,
+        reviewImg: b.icon,
+        grid: true,
+      };
+    },
+
+    skin() {
+      const b = pick(withSkins);
+      const skin = pick(b.skins);
+      return {
+        question: "이 스킨은 어떤 브롤러의 것?",
+        stage: textCard("skin", "👕 스킨", skin),
+        images: [],
+        choices: portraitChoices(b),
+        answerText: skin.replaceAll("○○○", b.name),
+        reviewImg: b.icon,
+        grid: true,
+      };
+    },
+
+    gear() {
+      const g = pick(DATA.gears);
+      const options = shuffle([g, ...sample(DATA.gears, 3, (x) => x === g)]);
+      return {
+        question: "이 기어의 이름은?",
+        stage: `<div class="item-card"><img src="${esc(g.img)}" alt=""></div>`,
+        images: [g.img],
+        choices: options.map((x) => ({ label: x.name, correct: x === g })),
+        answerText: g.name,
+        reviewImg: g.img,
+      };
+    },
+
+    hp() {
+      return compareQuestion("hp", "체력이 더 높은 브롤러는?", "체력");
+    },
+
+    speed() {
+      return compareQuestion("speed", "이동 속도가 더 빠른 브롤러는?", "속도");
+    },
   };
 
+  function textCard(kind, badge, text) {
+    return `<div class="text-card ${kind}"><span class="badge">${esc(badge)}</span><strong>${esc(text)}</strong></div>`;
+  }
+
+  // 두 브롤러의 능력치(값이 다른 쌍)를 비교하는 문제
+  function compareQuestion(stat, question, label) {
+    const a = pick(brawlers);
+    const b = pick(brawlers.filter((x) => x[stat] && x[stat] !== a[stat]));
+    const win = a[stat] > b[stat] ? a : b;
+    const pair = shuffle([a, b]);
+    return {
+      question,
+      stage: `<div class="versus">${pair.map((x) => brawlerImg(figure(x))).join('<span class="vs">VS</span>')}</div>`,
+      images: pair.map(figure),
+      choices: pair.map((x) => ({ label: x.name, img: x.icon, correct: x === win })),
+      answerText: pair.map((x) => `${x.name} ${label} ${x[stat].toLocaleString()}`).join(" vs "),
+      reviewImg: win.icon,
+      grid: true,
+    };
+  }
+
   const MODES = [
-    { id: "portrait", title: "브롤러 맞히기", desc: "얼굴을 보고 이름을 맞혀요", thumb: () => pick(brawlers).icon },
+    { id: "mix", title: "랜덤 믹스", desc: "모든 유형이 섞여 나와요", thumb: () => pick(brawlers).icon, featured: true },
+    { group: "브롤러", id: "portrait", title: "브롤러 맞히기", desc: "얼굴을 보고 이름을 맞혀요", thumb: () => pick(brawlers).icon },
     { id: "silhouette", title: "실루엣 퀴즈", desc: "그림자만 보고 맞혀요", thumb: () => figure(pick(brawlers)), thumbClass: "silhouette" },
     { id: "zoom", title: "줌 퀴즈", desc: "확대된 일부만 보고 맞혀요", thumb: () => pick(brawlers).img, thumbClass: "thumb-zoom" },
-    { id: "gadget", title: "가젯 퀴즈", desc: "가젯의 주인을 찾아요", thumb: () => pick(pick(withGadgets).gadgets).img },
-    { id: "starPower", title: "스타 파워 퀴즈", desc: "스타 파워의 주인을 찾아요", thumb: () => pick(pick(withStarPowers).starPowers).img },
-    { id: "rarity", title: "희귀도 퀴즈", desc: "브롤러의 희귀도는?", thumb: () => pick(brawlers).icon },
-    { id: "role", title: "역할군 퀴즈", desc: "탱커? 저격수? 어쌔신?", thumb: () => pick(brawlers).icon },
+    { id: "pin", title: "핀 퀴즈", desc: "핀 표정을 보고 맞혀요", thumb: () => pick(withPin).pin },
     { id: "description", title: "설명 퀴즈", desc: "게임 속 소개글을 보고 맞혀요", thumb: () => pick(brawlers).icon },
-    { id: "map", title: "맵 모드 퀴즈", desc: "맵을 보고 모드를 맞혀요", thumb: () => DATA.modes[pick(mapModes)].img },
+    { group: "능력·아이템", id: "gadget", title: "가젯 퀴즈", desc: "가젯의 주인을 찾아요", thumb: () => pick(pick(withGadgets).gadgets).img },
+    { id: "starPower", title: "스타 파워 퀴즈", desc: "스타 파워의 주인을 찾아요", thumb: () => pick(pick(withStarPowers).starPowers).img },
+    { id: "hypercharge", title: "하이퍼차지 퀴즈", desc: "하이퍼차지 이름으로 맞혀요", thumb: () => pick(brawlers).icon },
+    { id: "skill", title: "스킬 퀴즈", desc: "기본 공격·궁극기 이름으로 맞혀요", thumb: () => pick(brawlers).icon },
+    { id: "gear", title: "기어 퀴즈", desc: "기어 아이콘을 보고 이름을 맞혀요", thumb: () => pick(DATA.gears).img },
+    { id: "skin", title: "스킨 퀴즈", desc: "스킨 이름으로 주인을 찾아요", thumb: () => pick(brawlers).icon },
+    { group: "정보·능력치", id: "rarity", title: "희귀도 퀴즈", desc: "브롤러의 희귀도는?", thumb: () => pick(brawlers).icon },
+    { id: "role", title: "역할군 퀴즈", desc: "탱커? 저격수? 어쌔신?", thumb: () => pick(brawlers).icon },
+    { id: "hp", title: "체력 비교", desc: "누구 체력이 더 높을까?", thumb: () => pick(brawlers).icon },
+    { id: "speed", title: "속도 비교", desc: "누가 더 빠를까?", thumb: () => pick(brawlers).icon },
+    { group: "맵", id: "map", title: "맵 모드 퀴즈", desc: "맵을 보고 모드를 맞혀요", thumb: () => DATA.modes[pick(mapModes)].img },
     { id: "mapName", title: "맵 이름 퀴즈", desc: "맵을 보고 이름을 맞혀요", thumb: () => DATA.modes[pick(mapModes)].img },
-    { id: "mix", title: "랜덤 믹스", desc: "모든 유형이 섞여 나와요", thumb: () => pick(brawlers).icon, featured: true },
   ];
 
   // ---------- 상태 ----------
@@ -248,6 +355,7 @@
     $("best-score").textContent = Math.max(0, ...Object.values(bests));
     $("logo-brawler").src = figure(pick(brawlers));
     $("mode-list").innerHTML = MODES.map((m) => `
+      ${m.group ? `<h3 class="mode-group">${m.group}</h3>` : ""}
       <button class="mode-card${m.featured ? " featured" : ""}" data-mode="${m.id}">
         <span class="mode-thumb"><img class="${m.thumbClass || ""}" src="${esc(m.thumb())}" alt=""></span>
         <span class="mode-text">
