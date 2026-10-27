@@ -466,3 +466,19 @@ button:disabled { cursor: default; }
 .choices.grid.many .choice { padding: 8px 4px; font-size: 14px; }
 .choices.grid.many .choice img { width: 52px; height: 52px; }
 .choices.grid.many .choice .key { left: 6px; top: 6px; transform: none; }
+
+/* 지옥 난이도 */
+.difficulty button.active[data-difficulty="hell"] { background: linear-gradient(180deg, #3a0000, #8b0000); }
+.blurred.heavy { filter: blur(24px) grayscale(1); }
+.mirrored { transform: scaleX(-1); }
+.grayscale { filter: grayscale(1) contrast(.9); transition: filter .5s; }
+.lives { min-height: 0; text-align: center; font-size: 20px; letter-spacing: 4px; }
+.lives:empty { display: none; }
+.lives .lost { filter: grayscale(1); opacity: .35; }
+
+/* 보기 8개 */
+.choices.grid.lots { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.choices.grid.lots .choice { padding: 6px 2px; font-size: 13px; }
+.choices.grid.lots .choice img { width: 44px; height: 44px; }
+.choices.grid.lots .choice .key { display: none; }
+.choices.lots:not(.grid) .choice { min-height: 48px; font-size: 15px; }

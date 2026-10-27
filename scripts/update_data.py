@@ -54,11 +54,18 @@ def by_id(path):
     return {row["id"]: row for row in get(f"game/{path}").values()}
 
 
-def mask_name(text, name):
-    """설명 퀴즈용: 설명 속 브롤러 이름을 ○○○ 로 가립니다."""
+def mask_name(text, name, inside_words=False):
+    """설명·스킨 퀴즈용: 글 속 브롤러 이름을 ○○○ 로 가립니다.
+
+    inside_words=True 이면 '파라오티스'처럼 다른 단어에 붙은 이름도 가립니다
+    (그 브롤러의 스킨 이름에만 쓰므로 조금 더 가려져도 괜찮습니다).
+    """
     parts = [name] + [p.strip() for p in re.split(r"[&]", name) if p.strip() and p.strip() != name]
     for part in sorted(parts, key=len, reverse=True):
-        text = re.sub(r"(?<![가-힣])" + re.escape(part) + PARTICLE, "○○○", text)
+        if inside_words:
+            text = text.replace(part, "○○○")
+        else:
+            text = re.sub(r"(?<![가-힣])" + re.escape(part) + PARTICLE, "○○○", text)
     return text
 
 
@@ -117,7 +124,7 @@ def main():
     skin_confs = get("game/csv_logic/skin_confs")
     skins = {}
     for sk in get("game/csv_logic/skins").values():
-        name = kr.get(sk.get("TID") or "")
+        name = re.sub(r"\s+", " ", kr.get(sk.get("TID") or "", "").replace("\\n", " ")).strip()
         char = (skin_confs.get(sk.get("Conf") or "", {}).get("Character") or "").split(";")[0]
         cid = char_ids.get(char)
         if name and cid:
@@ -161,7 +168,7 @@ def main():
             "super": sk.get("super"),
             "hypercharge": sk.get("hypercharge"),
             # 스킨 이름 속 브롤러 이름은 가리고, 이름만 남는 기본 스킨은 제외
-            "skins": [m for m in (mask_name(n, name) for n in skins.get(b["id"], [])) if m.replace("○", "").strip()],
+            "skins": [m for m in (mask_name(n, name, inside_words=True) for n in skins.get(b["id"], [])) if m.replace("○", "").strip()],
             "gadgets": accessory(b["gadgets"], "gadgets"),
             "starPowers": accessory(b["starPowers"], "star-powers"),
         })

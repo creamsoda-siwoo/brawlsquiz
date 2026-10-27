@@ -16,6 +16,12 @@
       time: 10, choices: 6, zoom: 4.5, itemNames: false, blur: true, closeStats: true,
       scoreRate: 1.5, penalty: 50,
     },
+    hell: {
+      label: "지옥 🔥", desc: "보기 8개 · 6초 · 흑백·좌우반전 · 목숨 3개 · 오답 -150점",
+      time: 6, choices: 8, zoom: 7, itemNames: false, blur: true, closeStats: true,
+      heavy: true, mirror: true, grayMaps: true, lives: 3,
+      scoreRate: 2.5, penalty: 150,
+    },
   };
 
   const $ = (id) => document.getElementById(id);
@@ -43,6 +49,15 @@
   const D = () => DIFFICULTIES[difficulty];
   const optionCount = () => D().choices - 1; // 정답을 뺀 오답 개수
 
+  // 난이도에 따라 문제 이미지를 가리는 효과 (흐림·흑백·좌우 반전)
+  const obscure = ({ blur = true } = {}) => [
+    blur && D().blur && "blurred",
+    blur && D().heavy && "heavy",
+    D().mirror && Math.random() < 0.5 && "mirrored",
+  ].filter(Boolean).join(" ");
+  const unveil = (stage) => stage.querySelectorAll(".blurred, .mirrored, .grayscale")
+    .forEach((el) => el.classList.remove("blurred", "heavy", "mirrored", "grayscale"));
+
   const store = {
     get(key) {
       try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
@@ -68,7 +83,7 @@
   // 보통: 절반은 같은 역할군, 어려움: 역할군·희귀도가 같은 비슷한 브롤러부터
   function brawlerDistractors(answer, n = optionCount()) {
     const others = brawlers.filter((b) => b.id !== answer.id);
-    if (difficulty !== "hard") {
+    if (difficulty === "normal") {
       const sameClass = sample(others, 2, (b) => b.class !== answer.class);
       return [...sameClass, ...sample(others, n - sameClass.length, (b) => sameClass.includes(b))];
     }
@@ -101,12 +116,12 @@
       const b = pick(brawlers);
       return {
         question: "이 브롤러의 이름은?",
-        stage: brawlerImg(figure(b), D().blur ? "blurred" : ""),
+        stage: brawlerImg(figure(b), obscure()),
         images: [figure(b)],
         choices: nameChoices(b),
         answerText: b.name,
         reviewImg: b.icon,
-        reveal: (stage) => stage.querySelector("img").classList.remove("blurred"),
+        reveal: unveil,
       };
     },
 
@@ -114,12 +129,12 @@
       const b = pick(brawlers);
       return {
         question: "그림자 속 브롤러는 누구?",
-        stage: brawlerImg(figure(b), "silhouette"),
+        stage: brawlerImg(figure(b), `silhouette ${obscure({ blur: false })}`),
         images: [figure(b)],
         choices: nameChoices(b),
         answerText: b.name,
         reviewImg: b.icon,
-        reveal: (stage) => stage.querySelector("img").classList.remove("silhouette"),
+        reveal: (stage) => { stage.querySelector("img").classList.remove("silhouette"); unveil(stage); },
       };
     },
 
@@ -202,11 +217,12 @@
       const options = withOptions(m.mode, mapModes);
       return {
         question: "이 맵의 게임 모드는?",
-        stage: `<div class="map-box"><img src="${esc(m.img)}" alt=""></div>`,
+        stage: `<div class="map-box"><img class="${D().grayMaps ? "grayscale" : ""}" src="${esc(m.img)}" alt=""></div>`,
         images: [m.img],
         choices: options.map((k) => ({ label: modeName(k), img: DATA.modes[k].img, color: DATA.modes[k].color, correct: k === m.mode })),
         answerText: `${m.name} · ${modeName(m.mode)}`,
         reviewImg: DATA.modes[m.mode].img,
+        reveal: unveil,
       };
     },
 
@@ -242,12 +258,12 @@
       const b = pick(withPin);
       return {
         question: "이 핀의 주인은?",
-        stage: `<img class="pin-img${D().blur ? " blurred" : ""}" src="${esc(b.pin)}" alt="">`,
+        stage: `<img class="pin-img ${obscure()}" src="${esc(b.pin)}" alt="">`,
         images: [b.pin],
         choices: nameChoices(b),
         answerText: b.name,
         reviewImg: b.pin,
-        reveal: (stage) => stage.querySelector("img").classList.remove("blurred"),
+        reveal: unveil,
       };
     },
 
@@ -331,7 +347,7 @@
     const a = pick(brawlers.filter((x) => x[stat]));
     const rivals = brawlers.filter((x) => x[stat] && x[stat] !== a[stat]);
     const b = D().closeStats
-      ? pick(rivals.sort((x, y) => Math.abs(x[stat] - a[stat]) - Math.abs(y[stat] - a[stat])).slice(0, 3))
+      ? pick(rivals.sort((x, y) => Math.abs(x[stat] - a[stat]) - Math.abs(y[stat] - a[stat])).slice(0, difficulty === "hell" ? 1 : 3))
       : pick(rivals);
     const win = a[stat] > b[stat] ? a : b;
     const pair = shuffle([a, b]);
@@ -425,8 +441,9 @@
 
   // ---------- 게임 ----------
   function startGame(modeId) {
-    game = { mode: modeId, difficulty, index: 0, score: 0, correct: 0, streak: 0, history: [], current: null, next: makeQuestion(modeId) };
+    game = { mode: modeId, difficulty, lives: D().lives, over: false, index: 0, score: 0, correct: 0, streak: 0, history: [], current: null, next: makeQuestion(modeId) };
     $("q-total").textContent = QUESTIONS_PER_GAME;
+    renderLives();
     $("score").textContent = "0";
     showScreen("quiz");
     nextQuestion();
@@ -451,7 +468,7 @@
     q.setup?.(stage);
 
     const choices = $("choices");
-    choices.className = "choices" + (q.grid ? " grid" : "") + (q.choices.length > 4 ? " many" : "");
+    choices.className = "choices" + (q.grid ? " grid" : "") + (q.choices.length > 4 ? " many" : "") + (q.choices.length > 6 ? " lots" : "");
     choices.innerHTML = q.choices.map((c, i) => `
       <button class="choice" data-i="${i}" ${c.color ? `style="--accent:${esc(c.color)}"` : ""} disabled>
         <span class="key">${i + 1}</span>
@@ -519,15 +536,28 @@
       if (lost) bumpScore();
       const penaltyText = lost ? ` (-${lost})` : "";
       fb.textContent = (i < 0 ? `시간 초과!${penaltyText} 정답: ` : `아쉬워요!${penaltyText} 정답: `) + q.answerText;
+      if (game.lives) {
+        game.lives--;
+        game.over = game.lives === 0;
+        renderLives();
+      }
       fb.className = "feedback bad";
     }
     $("streak").textContent = game.streak >= 2 ? `🔥 ${game.streak}연속 정답!` : "";
     game.history.push({ question: q.question, answer: q.answerText, img: q.reviewImg, correct });
 
-    const last = game.index + 1 >= QUESTIONS_PER_GAME;
-    $("next").textContent = last ? "결과 보기 🏆" : "다음 ▶";
+    const last = game.over || game.index + 1 >= QUESTIONS_PER_GAME;
+    $("next").textContent = game.over ? "게임 오버 💀" : last ? "결과 보기 🏆" : "다음 ▶";
     $("next").classList.remove("hidden");
     $("next").focus({ preventScroll: true });
+  }
+
+  // 지옥 난이도의 남은 목숨 표시
+  function renderLives() {
+    const max = D().lives;
+    $("lives").innerHTML = max
+      ? Array.from({ length: max }, (_, i) => `<span class="${i < game.lives ? "" : "lost"}">❤️</span>`).join("")
+      : "";
   }
 
   function bumpScore() {
@@ -541,18 +571,19 @@
   function advance() {
     if (!game?.answered) return;
     game.index++;
-    if (game.index >= QUESTIONS_PER_GAME) showResult();
+    if (game.over || game.index >= QUESTIONS_PER_GAME) showResult();
     else nextQuestion();
   }
 
   function showResult() {
     const { score, correct, mode, history } = game;
     const ratio = correct / QUESTIONS_PER_GAME;
-    const title = ratio === 1 ? "전설의 브롤러! 🌟" : ratio >= 0.7 ? "브롤 마스터!" : ratio >= 0.4 ? "괜찮은 실력이에요!" : "초보 브롤러…";
+    const title = game.over ? "지옥에서 탈락… 💀" : ratio === 1 ? "전설의 브롤러! 🌟" : ratio >= 0.7 ? "브롤 마스터!" : ratio >= 0.4 ? "괜찮은 실력이에요!" : "초보 브롤러…";
     $("result-title").textContent = title;
     $("result-brawler").src = figure(pick(brawlers));
     $("final-score").textContent = score;
-    $("result-sub").textContent = `${QUESTIONS_PER_GAME}문제 중 ${correct}문제 정답 · ${MODES.find((m) => m.id === mode).title} · ${D().label}`;
+    const progress = game.over ? `${history.length}번째 문제에서 목숨 소진 · ` : "";
+    $("result-sub").textContent = `${progress}${QUESTIONS_PER_GAME}문제 중 ${correct}문제 정답 · ${MODES.find((m) => m.id === mode).title} · ${D().label}`;
 
     const bests = store.get("brawlquiz-best") || {};
     const isBest = score > (bests[bestKey(mode)] || 0);
@@ -598,7 +629,7 @@
   $("home-btn").addEventListener("click", quit);
   document.addEventListener("keydown", (e) => {
     if (!$("quiz").classList.contains("active") || !game) return;
-    if (/^[1-6]$/.test(e.key) && !game.answered) {
+    if (/^[1-8]$/.test(e.key) && !game.answered) {
       const btn = $("choices").querySelector(`button[data-i="${Number(e.key) - 1}"]`);
       if (btn && !btn.disabled) answer(Number(e.key) - 1);
     } else if ((e.key === "Enter" || e.key === " ") && game.answered && document.activeElement !== $("next")) {
