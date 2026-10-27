@@ -482,3 +482,19 @@ button:disabled { cursor: default; }
 .choices.grid.lots .choice img { width: 44px; height: 44px; }
 .choices.grid.lots .choice .key { display: none; }
 .choices.lots:not(.grid) .choice { min-height: 48px; font-size: 15px; }
+
+/* 효과음 켜기/끄기 */
+#home { position: relative; }
+.sound-toggle {
+  flex: none;
+  width: 40px; height: 40px;
+  padding: 0;
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  background: var(--yellow);
+  box-shadow: 0 3px 0 var(--ink);
+  font-size: 18px;
+  line-height: 1;
+}
+.sound-toggle:active { transform: translateY(3px); box-shadow: 0 0 0 var(--ink); }
+.home-sound { position: absolute; top: 0; right: 0; z-index: 1; }

@@ -14,6 +14,7 @@
   <main id="app">
     <!-- 홈 화면 -->
     <section id="home" class="screen active">
+      <button class="sound-toggle home-sound" type="button" data-sound>🔊</button>
       <header class="logo">
         <img id="logo-brawler" alt="">
         <h1>브롤 퀴즈</h1>
@@ -30,6 +31,7 @@
       <div class="hud">
         <button id="quit" class="btn-icon" aria-label="그만하기">✕</button>
         <div class="progress"><span id="q-num">1</span> / <span id="q-total">10</span></div>
+        <button class="sound-toggle" type="button" data-sound>🔊</button>
         <div class="score">⭐ <span id="score">0</span></div>
       </div>
       <div class="timer"><div id="timer-bar"></div></div>
@@ -62,6 +64,7 @@
     <a href="https://brawlify.com" target="_blank" rel="noopener">Brawlify</a>에서 제공합니다.
   </footer>
   <script src="js/data.js"></script>
+  <script src="js/sound.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

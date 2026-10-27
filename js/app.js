@@ -2,6 +2,7 @@
   "use strict";
 
   const DATA = window.BRAWL_DATA;
+  const SFX = window.SFX;
   const QUESTIONS_PER_GAME = 10;
 
   // 난이도별 규칙
@@ -441,6 +442,7 @@
 
   // ---------- 게임 ----------
   function startGame(modeId) {
+    SFX.play("start");
     game = { mode: modeId, difficulty, lives: D().lives, over: false, index: 0, score: 0, correct: 0, streak: 0, history: [], current: null, next: makeQuestion(modeId) };
     $("q-total").textContent = QUESTIONS_PER_GAME;
     renderLives();
@@ -487,6 +489,7 @@
   function startTimer() {
     const bar = $("timer-bar");
     const start = performance.now();
+    let lastTick = null;
     clearInterval(timerId);
     bar.style.width = "100%";
     bar.className = "";
@@ -496,6 +499,12 @@
       game.timeLeft = left;
       bar.style.width = `${(left / limit) * 100}%`;
       bar.className = left < limit / 3 ? "danger" : left < limit * 0.6 ? "warn" : "";
+      // 마지막 3초는 1초마다 째깍
+      const sec = Math.ceil(left);
+      if (left > 0 && sec <= 3 && sec !== lastTick) {
+        lastTick = sec;
+        SFX.play("tick");
+      }
       if (left <= 0) answer(-1);
     }, 50);
     game.timeLeft = D().time;
@@ -527,6 +536,7 @@
       const gained = Math.round(base * D().scoreRate);
       game.score += gained;
       fb.textContent = `정답! +${gained}`;
+      SFX.play("correct", game.streak);
       fb.className = "feedback good";
       bumpScore();
     } else {
@@ -540,6 +550,11 @@
         game.lives--;
         game.over = game.lives === 0;
         renderLives();
+      }
+      if (game.over) SFX.play("gameOver");
+      else {
+        SFX.play("wrong");
+        if (game.lives) SFX.play("lifeLost");
       }
       fb.className = "feedback bad";
     }
@@ -592,6 +607,8 @@
       store.set("brawlquiz-best", bests);
     }
     $("new-best").classList.toggle("hidden", !isBest || score === 0);
+    if (!game.over) SFX.play(ratio >= 0.7 ? "fanfare" : "result");
+    if (isBest && score > 0) SFX.play("newBest");
 
     $("review").innerHTML = history.map((h, i) => `
       <li class="${h.correct ? "ok" : "ng"}">
@@ -612,6 +629,7 @@
   $("difficulty").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-difficulty]");
     if (!btn) return;
+    SFX.play("click");
     store.set("brawlquiz-difficulty", btn.dataset.difficulty);
     renderHome();
   });
@@ -624,6 +642,14 @@
     if (btn && !btn.disabled) answer(Number(btn.dataset.i));
   });
   $("next").addEventListener("click", advance);
+  // 효과음 켜기/끄기 버튼 (홈·퀴즈 화면에 하나씩)
+  const soundButtons = document.querySelectorAll("[data-sound]");
+  const renderSound = () => soundButtons.forEach((btn) => {
+    btn.textContent = SFX.muted ? "🔇" : "🔊";
+    btn.setAttribute("aria-label", SFX.muted ? "효과음 켜기" : "효과음 끄기");
+  });
+  soundButtons.forEach((btn) => btn.addEventListener("click", () => { SFX.toggle(); renderSound(); }));
+  renderSound();
   $("quit").addEventListener("click", quit);
   $("retry").addEventListener("click", () => startGame(game.mode));
   $("home-btn").addEventListener("click", quit);
